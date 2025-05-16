@@ -46,17 +46,26 @@ def detect_red_bricks(frame, model):
             mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
             mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
             mask = cv2.bitwise_or(mask1, mask2)
-            #cv2.imshow('HSV Mask', mask)  # Debug
 
             # Calculate percentage of red pixels
             red_pixels = cv2.countNonZero(mask)
             total_pixels = roi.shape[0] * roi.shape[1]
             
-            # Classify as red brick if more than 50% of pixels are red
+            # Classify as red brick if more than 20% of pixels are red
             if total_pixels > 0 and red_pixels / total_pixels > 0.2:
-                cv2.rectangle(output_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(output_image, 'Red Brick', (x1, y1 - 10), 
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                # Find contours in the mask
+                contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                if contours:
+                    # Find the largest contour
+                    largest_contour = max(contours, key=cv2.contourArea)
+                    # Offset the contour coordinates to the original frame
+                    largest_contour += np.array([[x1, y1]])
+                    # Draw the contour on the output image
+                    cv2.drawContours(output_image, [largest_contour], -1, (0, 255, 0), 2)
+                    # Put label near the contour
+                    x, y = largest_contour[0][0]
+                    cv2.putText(output_image, 'Red Brick', (x, y - 10), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
     
     return output_image
 
@@ -108,44 +117,52 @@ def calibrate_color(frame):
         if key == 13:  # Enter key
             break
     cv2.destroyWindow('Calibrate Color')
-
-# Load YOLO model (ensure the model file is available)
-model = YOLO('yolo11s.pt')
-
-# Open camera
-cap = cv2.VideoCapture(0)
-if not cap.isOpened():
-    print("Error: Could not open camera.")
-    exit()
-
-print("Press 'q' to quit, 'c' to calibrate color")
-
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        print("Error: Could not read frame.")
-        break
     
-    # Detect red bricks
-    output_image = detect_red_bricks(frame, model)
-    
-    # Add instruction text
-    cv2.putText(output_image, "Press 'c' to calibrate color", (10, 30), 
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
-    # Add current thresholds text
-    cv2.putText(output_image, f"Thresholds: min_S={min_S:.1f}, min_V={min_V:.1f}", (10, 60), 
-                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 255), 1)
-    
-    # Display the output
-    cv2.imshow('Red Brick Detection', output_image)
-    
-    # Handle key presses
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord('q'):
-        break
-    elif key == ord('c'):
-        calibrate_color(frame)
+def load_camera_data(file_path):
+    """Load camera matrix and distortion coefficients from a file."""
+    with np.load(file_path) as data:
+        camera_matrix = data['camera_matrix']
+        dist_coeffs = data['dist_coeffs']
+    return camera_matrix, dist_coeffs
 
-# Cleanup
-cap.release()
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    # Load YOLO model (ensure the model file is available)
+    model = YOLO('yolo11s.pt')
+    # Open camera
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Error: Could not open camera.")
+        exit()
+    # Load camera data
+    camera_matrix, dist_coeffs = load_camera_data('calibration_data_1080.npz')
+    print("Press 'q' to quit, 'c' to calibrate color") 
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Error: Could not read frame.")
+            break
+        
+        # Detect red bricks
+        output_image = detect_red_bricks(frame, model)
+        
+        # Add instruction text
+        cv2.putText(output_image, "Press 'c' to calibrate color", (10, 30), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
+        # Add current thresholds text
+        cv2.putText(output_image, f"Thresholds: min_S={min_S:.1f}, min_V={min_V:.1f}", (10, 60), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 255), 1)
+        
+        # Display the output
+        cv2.imshow('Red Brick Detection', output_image)
+        
+        # Handle key presses
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
+            break
+        elif key == ord('c'):
+            calibrate_color(frame)
+
+    # Cleanup
+    cap.release()
+    cv2.destroyAllWindows()
