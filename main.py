@@ -5,7 +5,8 @@ import os
 from collections import deque
 import json
 from typing import Optional, Dict
-import detection.py as detection
+import brick_detection
+import arucotag_detection
 
 # Global variables
 home_position = None
@@ -36,8 +37,9 @@ if __name__ == "__main__":
     # Open camera
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FPS, 30)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            
     print("Press 'q' to quit")
 
     while True:
@@ -46,8 +48,11 @@ if __name__ == "__main__":
             break
         
         # Detect red bricks using the loaded calibration
-        output_image = detection.detect_red_bricks(frame, model)
+        output_image = brick_detection.detect_red_bricks(frame, model)
         
+        # detect aruco tags
+        output_image = arucotag_detection.detect_aruco_markers(output_image, camera_matrix, dist_coeffs)
+
         # Display the output
         cv2.imshow('Detected Red Bricks', output_image)
         
