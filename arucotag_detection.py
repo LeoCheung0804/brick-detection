@@ -170,7 +170,7 @@ def detect_aruco_markers(image, camera_matrix, dist_coeffs):
                     np.radians(rel_pitch_deg + robot_home_pos['pitch']),
                     np.radians(rel_roll_deg + robot_home_pos['yaw'])
                 ]
-
+                '''
                 print(f"Current camera position (m):")
                 print(f"  X: {camera_position[0,0]:.3f}")
                 print(f"  Y: {camera_position[0,1]:.3f}")
@@ -200,7 +200,9 @@ def detect_aruco_markers(image, camera_matrix, dist_coeffs):
                 print(f"  Yaw (3): {real_position[2]:.3f}")
                 print(f"Distance: {distance:.3f} meters")
                 print(f"")
+                '''
             else:
+                '''
                 print(f"Camera position (m):")
                 print(f"  X: {camera_position[0,0]:.3f}")
                 print(f"  Y: {camera_position[0,1]:.3f}")
@@ -210,6 +212,7 @@ def detect_aruco_markers(image, camera_matrix, dist_coeffs):
                 print(f"  Pitch (X-axis): {pitch_deg:.2f}")
                 print(f"  Roll (Z-axis): {roll_deg:.2f}")
                 print("\nPress 'h' to set home position")
+                '''
     else:
         print("No ArUco markers detected")
 

@@ -37,8 +37,8 @@ if __name__ == "__main__":
     # Open camera
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FPS, 30)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             
     print("Press 'q' to quit")
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
             break
         
         # Detect red bricks using the loaded calibration
-        output_image = brick_detection.detect_red_bricks(frame, model)
+        output_image, brick_positions = brick_detection.detect_red_bricks(frame, model)
         
         # detect aruco tags
         output_image = arucotag_detection.detect_aruco_markers(output_image, camera_matrix, dist_coeffs)
