@@ -23,9 +23,23 @@ def detect_red_bricks(frame, model):
     """Detect red bricks in the frame using YOLO and dynamic HSV color filtering."""
     global min_S, min_V
     # Run YOLO detection
-    results = model(frame)
+    results = model(frame, verbose=False)
     output_image = frame.copy()
-    
+    # Convert ROI to HSV color space
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            
+    # Use fixed red thresholds for simplicity
+    lower_red1 = np.array([0, 40, 40])
+    upper_red1 = np.array([25, 255, 255])
+    lower_red2 = np.array([156, 40, 40])
+    upper_red2 = np.array([180, 255, 255])
+            
+    # Create masks for red color
+    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+    mask = cv2.bitwise_or(mask1, mask2)
+    filtered = cv2.bitwise_and(frame, frame, mask=mask)
+
     for result in results:
         boxes = result.boxes
         for box in boxes:
@@ -37,15 +51,22 @@ def detect_red_bricks(frame, model):
             hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
             
             # Define red color ranges with dynamic S and V thresholds
-            lower_red1 = np.array([0, int(min_S), int(min_V)])
-            upper_red1 = np.array([15, 255, 255])
-            lower_red2 = np.array([165, int(min_S), int(min_V)])
-            upper_red2 = np.array([179, 255, 255])
+            #lower_red1 = np.array([0, int(min_S), int(min_V)])
+            #upper_red1 = np.array([15, 255, 255])
+            #lower_red2 = np.array([165, int(min_S), int(min_V)])
+            #upper_red2 = np.array([179, 255, 255])
+            
+            # Use fixed red thresholds for simplicity
+            lower_red1 = np.array([0, 43, 46])
+            upper_red1 = np.array([25, 255, 255])
+            lower_red2 = np.array([156, 43, 46])
+            upper_red2 = np.array([180, 255, 255])
             
             # Create masks for red color
             mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
             mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
             mask = cv2.bitwise_or(mask1, mask2)
+            #filtered = cv2.bitwise_and(frame, frame, mask=mask)
 
             # Calculate percentage of red pixels
             red_pixels = cv2.countNonZero(mask)
@@ -67,7 +88,7 @@ def detect_red_bricks(frame, model):
                     cv2.putText(output_image, 'Red Brick', (x, y - 10), 
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
     
-    return output_image
+    return output_image , filtered
 
 def calibrate_color(frame):
     """Calibrate the red brick color by selecting a region and adjusting HSV thresholds."""
@@ -127,7 +148,7 @@ def load_camera_data(file_path):
 
 if __name__ == "__main__":
     # Load YOLO model (ensure the model file is available)
-    model = YOLO('yolo11s.pt')
+    model = YOLO('yolo11n.pt')
     # Open camera
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -144,17 +165,15 @@ if __name__ == "__main__":
             break
         
         # Detect red bricks
-        output_image = detect_red_bricks(frame, model)
+        output_image, filtered = detect_red_bricks(frame, model)
         
         # Add instruction text
         cv2.putText(output_image, "Press 'c' to calibrate color", (10, 30), 
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
-        # Add current thresholds text
-        cv2.putText(output_image, f"Thresholds: min_S={min_S:.1f}, min_V={min_V:.1f}", (10, 60), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 255), 1)
         
         # Display the output
         cv2.imshow('Red Brick Detection', output_image)
+        cv2.imshow("Dynamic HSV Filter", filtered)
         
         # Handle key presses
         key = cv2.waitKey(1) & 0xFF
